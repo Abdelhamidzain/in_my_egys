@@ -2,21 +2,21 @@
 import 'package:flutter/gestures.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Birthdate wheel picker (vertical)
-class BirthdateWheelPicker extends StatefulWidget {
+/// Age wheel picker (vertical)
+class AgeWheelPicker extends StatefulWidget {
   final String title;
   final String subtitle;
-  final DateTime? initialDate;
+  final int initialAge;
   final int minAge;
   final int maxAge;
-  final ValueChanged<DateTime> onChanged;
+  final ValueChanged<int> onChanged;
   final bool isAr;
 
-  const BirthdateWheelPicker({
+  const AgeWheelPicker({
     super.key,
     required this.title,
     required this.subtitle,
-    this.initialDate,
+    this.initialAge = 30,
     this.minAge = 1,
     this.maxAge = 120,
     required this.onChanged,
@@ -24,23 +24,17 @@ class BirthdateWheelPicker extends StatefulWidget {
   });
 
   @override
-  State<BirthdateWheelPicker> createState() => _BirthdateWheelPickerState();
+  State<AgeWheelPicker> createState() => _AgeWheelPickerState();
 }
 
-class _BirthdateWheelPickerState extends State<BirthdateWheelPicker> {
+class _AgeWheelPickerState extends State<AgeWheelPicker> {
   late FixedExtentScrollController _scrollController;
   late int _selectedAge;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    if (widget.initialDate != null) {
-      _selectedAge = now.year - widget.initialDate!.year;
-    } else {
-      _selectedAge = 30;
-    }
-    _selectedAge = _selectedAge.clamp(widget.minAge, widget.maxAge);
+    _selectedAge = widget.initialAge.clamp(widget.minAge, widget.maxAge);
     _scrollController = FixedExtentScrollController(initialItem: _selectedAge - widget.minAge);
   }
 
@@ -92,17 +86,15 @@ class _BirthdateWheelPickerState extends State<BirthdateWheelPicker> {
                 physics: const FixedExtentScrollPhysics(),
                 onSelectedItemChanged: (index) {
                   final age = widget.minAge + index;
-                  final now = DateTime.now();
-                  final date = DateTime(now.year - age, now.month, now.day);
                   setState(() => _selectedAge = age);
-                  widget.onChanged(date);
+                  widget.onChanged(age);
                 },
                 childDelegate: ListWheelChildBuilderDelegate(
                   childCount: itemCount,
                   builder: (context, index) {
                     final age = widget.minAge + index;
                     final isSelected = age == _selectedAge;
-                    return _VerticalWheelItem(value: age, unit: widget.isAr ? 'سنة' : 'y', isSelected: isSelected, isAr: widget.isAr);
+                    return _VerticalWheelItem(value: age, unit: widget.isAr ? 'سنة' : 'years', isSelected: isSelected, isAr: widget.isAr);
                   },
                 ),
               ),
@@ -115,7 +107,7 @@ class _BirthdateWheelPickerState extends State<BirthdateWheelPicker> {
   }
 }
 
-/// Weight wheel picker - Horizontal ruler (FIXED)
+/// Weight wheel picker - Horizontal ruler (FIXED - same for all languages)
 class WeightWheelPicker extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -141,10 +133,9 @@ class WeightWheelPicker extends StatefulWidget {
 }
 
 class _WeightWheelPickerState extends State<WeightWheelPicker> {
-  ScrollController? _scrollController;
+  late ScrollController _scrollController;
   late int _selectedValue;
   final double _itemWidth = 10.0;
-  bool _initialized = false;
 
   @override
   void initState() {
@@ -154,24 +145,12 @@ class _WeightWheelPickerState extends State<WeightWheelPicker> {
 
   @override
   void dispose() {
-    _scrollController?.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _initController() {
-    if (!_initialized) {
-      _initialized = true;
-      // Calculate initial offset - value maps directly to position
-      final initialOffset = (_selectedValue - widget.minValue.round()) * _itemWidth;
-      _scrollController = ScrollController(initialScrollOffset: initialOffset);
-      _scrollController!.addListener(_onScrollUpdate);
-    }
-  }
-
-  void _onScrollUpdate() {
-    if (_scrollController == null) return;
-    final offset = _scrollController!.offset;
-    // Calculate value from offset - left is min, right is max
+  void _updateValueFromScroll() {
+    final offset = _scrollController.offset;
     final newValue = (offset / _itemWidth + widget.minValue).round().clamp(widget.minValue.round(), widget.maxValue.round());
     if (newValue != _selectedValue) {
       setState(() => _selectedValue = newValue);
@@ -181,7 +160,6 @@ class _WeightWheelPickerState extends State<WeightWheelPicker> {
 
   @override
   Widget build(BuildContext context) {
-    _initController();
     final totalItems = (widget.maxValue - widget.minValue).round();
     final totalWidth = totalItems * _itemWidth;
     
@@ -193,7 +171,6 @@ class _WeightWheelPickerState extends State<WeightWheelPicker> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Title inside card
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
             child: Column(
@@ -240,40 +217,45 @@ class _WeightWheelPickerState extends State<WeightWheelPicker> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final centerX = constraints.maxWidth / 2;
+                final initialOffset = (_selectedValue - widget.minValue.round()) * _itemWidth;
+                
+                // Initialize controller here with correct offset
+                _scrollController = ScrollController(initialScrollOffset: initialOffset);
+                _scrollController.addListener(_updateValueFromScroll);
                 
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Scrollable ruler
-                    GestureDetector(
-                      onHorizontalDragUpdate: (details) {
-                        if (_scrollController == null) return;
-                        // Drag left = increase value, drag right = decrease value
-                        final direction = widget.isAr ? -1.0 : 1.0;
-                        final newOffset = _scrollController!.offset + (details.delta.dx * direction);
-                        _scrollController!.jumpTo(newOffset.clamp(0.0, totalWidth));
-                      },
-                      child: Listener(
-                        onPointerSignal: (event) {
-                          if (event is PointerScrollEvent && _scrollController != null) {
-                            final newOffset = _scrollController!.offset + event.scrollDelta.dy;
-                            _scrollController!.jumpTo(newOffset.clamp(0.0, totalWidth));
-                          }
+                    // Scrollable ruler - Directionality LTR to ignore RTL
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: GestureDetector(
+                        onHorizontalDragUpdate: (details) {
+                          final newOffset = _scrollController.offset - details.delta.dx;
+                          _scrollController.jumpTo(newOffset.clamp(0.0, totalWidth));
                         },
-                        child: SingleChildScrollView(
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const ClampingScrollPhysics(),
-                          child: Container(
-                            width: totalWidth + constraints.maxWidth,
-                            height: 80,
-                            padding: EdgeInsets.only(left: centerX, right: centerX),
-                            child: CustomPaint(
-                              size: Size(totalWidth, 80),
-                              painter: _WeightRulerPainter(
-                                minValue: widget.minValue.round(),
-                                maxValue: widget.maxValue.round(),
-                                itemWidth: _itemWidth,
+                        child: Listener(
+                          onPointerSignal: (event) {
+                            if (event is PointerScrollEvent) {
+                              final newOffset = _scrollController.offset + event.scrollDelta.dy;
+                              _scrollController.jumpTo(newOffset.clamp(0.0, totalWidth));
+                            }
+                          },
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: const ClampingScrollPhysics(),
+                            child: Container(
+                              width: totalWidth + constraints.maxWidth,
+                              height: 80,
+                              padding: EdgeInsets.only(left: centerX, right: centerX),
+                              child: CustomPaint(
+                                size: Size(totalWidth, 80),
+                                painter: _WeightRulerPainter(
+                                  minValue: widget.minValue.round(),
+                                  maxValue: widget.maxValue.round(),
+                                  itemWidth: _itemWidth,
+                                ),
                               ),
                             ),
                           ),
@@ -454,7 +436,7 @@ class _VerticalWheelItem extends StatelessWidget {
   }
 }
 
-// Weight ruler painter - draws numbers correctly (small to large, left to right)
+// Weight ruler painter
 class _WeightRulerPainter extends CustomPainter {
   final int minValue;
   final int maxValue;
@@ -467,14 +449,12 @@ class _WeightRulerPainter extends CustomPainter {
     final paint = Paint()..style = PaintingStyle.fill..color = AppColors.primary800;
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
-    // Draw from minValue to maxValue (left to right)
     for (int v = minValue; v <= maxValue; v++) {
       final x = (v - minValue) * itemWidth;
       final isMajor = v % 5 == 0;
       final tickHeight = isMajor ? 30.0 : 18.0;
       final tickWidth = isMajor ? 2.0 : 1.5;
 
-      // Draw ticks from top
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(x - tickWidth / 2, 0, tickWidth, tickHeight),
@@ -483,7 +463,6 @@ class _WeightRulerPainter extends CustomPainter {
         paint,
       );
 
-      // Draw numbers at bottom for major values
       if (isMajor) {
         textPainter.text = TextSpan(
           text: '$v',
@@ -527,4 +506,5 @@ class _TrianglePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-
+// Backward compatibility
+typedef BirthdateWheelPicker = AgeWheelPicker;

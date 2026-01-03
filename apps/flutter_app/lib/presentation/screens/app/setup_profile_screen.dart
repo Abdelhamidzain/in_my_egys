@@ -21,7 +21,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
   Gender? _selectedGender;
   final _nameController = TextEditingController();
   final _notesController = TextEditingController();
-  DateTime? _dateOfBirth;
+  int _age = 30;
   String _selectedTimezone = 'Asia/Riyadh';
   String? _selectedBloodType;
   double? _weight;
@@ -65,7 +65,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
         displayName: _nameController.text.trim(),
         relationship: Relationship.self_.value,
         type: ProfileType.self_,
-        dateOfBirth: _dateOfBirth,
+        dateOfBirth: DateTime(DateTime.now().year - _age, 1, 1),
         gender: _selectedGender,
         timezoneHome: _selectedTimezone,
       );
@@ -246,12 +246,12 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
         const SizedBox(height: 24),
         
         BirthdateWheelPicker(
-          title: isAr ? 'تاريخ الميلاد' : 'Date of Birth',
+          title: isAr ? 'العمر' : 'Age',
           subtitle: isAr ? 'عمرك يساعدنا في تقديم نصائح مناسبة' : 'Your age helps us recommend safe advice',
-          initialDate: _dateOfBirth,
+          initialAge: _age ?? 30,
           minAge: 1,
           maxAge: 120,
-          onChanged: (date) => setState(() => _dateOfBirth = date),
+          onChanged: (age) => setState(() => _age = age),
           isAr: isAr,
         ),
       ],
@@ -340,9 +340,9 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                 style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800),
               ),
               const SizedBox(height: 4),
-              if (_dateOfBirth != null)
+              if (_age > 0)
                 Text(
-                  '${DateTime.now().year - _dateOfBirth!.year} ${isAr ? 'سنة' : 'years old'}',
+                  '${_age} ${isAr ? 'سنة' : 'years old'}',
                   style: TextStyle(color: AppColors.primary700),
                 ),
             ])),
@@ -432,3 +432,6 @@ class _GenderCard extends StatelessWidget {
     ),
   );
 }
+
+
+

@@ -41,6 +41,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordController.text,
       );
 
+      // Check if user is now logged in
+      final user = ref.read(supabaseClientProvider).auth.currentUser;
+      
+      if (user != null && mounted) {
+        context.go(AppRoutes.today);
+        return;
+      }
+
       final authState = ref.read(authNotifierProvider);
       if (authState.hasError && mounted) {
         String errorMessage = _parseError(authState.error);

@@ -23,7 +23,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
   Gender? _selectedGender;
   final _nameController = TextEditingController();
   final _notesController = TextEditingController();
-  DateTime? _dateOfBirth;
+  int _age = 30;
   String _selectedTimezone = 'Asia/Riyadh';
   String? _selectedBloodType;
   double? _weight;
@@ -129,7 +129,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
         displayName: _nameController.text.trim(),
         relationship: _selectedRelationship.value,
         type: ProfileType.managed,
-        dateOfBirth: _dateOfBirth,
+        dateOfBirth: DateTime(DateTime.now().year - _age, 1, 1),
         gender: _selectedGender,
         timezoneHome: _selectedTimezone,
       );
@@ -304,12 +304,12 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
           const SizedBox(height: 24),
         ],
         BirthdateWheelPicker(
-          title: isAr ? 'تاريخ الميلاد' : 'Date of Birth',
+          title: isAr ? 'العمر' : 'Age',
           subtitle: isAr ? 'كم عمر ${_selectedRelationship.getLabel('ar')}؟' : 'How old is ${_selectedRelationship.getLabel('en')}?',
-          initialDate: _dateOfBirth,
+          initialAge: _age ?? 30,
           minAge: _getMinimumAgeGap(_selectedRelationship),
           maxAge: 120,
-          onChanged: (date) => setState(() => _dateOfBirth = date),
+          onChanged: (age) => setState(() => _age = age),
           isAr: isAr,
         ),
       ],
@@ -388,9 +388,9 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
                 decoration: BoxDecoration(color: AppColors.primary700, borderRadius: BorderRadius.circular(12)),
                 child: Text(_selectedRelationship.getLabel(isAr ? 'ar' : 'en'), style: const TextStyle(color: Colors.white, fontSize: 12)),
               ),
-              if (_dateOfBirth != null) ...[
+              if (_age > 0) ...[
                 const SizedBox(height: 8),
-                Text('${DateTime.now().year - _dateOfBirth!.year} ${isAr ? 'سنة' : 'years old'}', style: TextStyle(color: AppColors.primary700)),
+                Text('${_age} ${isAr ? 'سنة' : 'years old'}', style: TextStyle(color: AppColors.primary700)),
               ],
             ])),
           ]),
@@ -441,3 +441,6 @@ class _GenderCard extends StatelessWidget {
     ),
   );
 }
+
+
+

@@ -1,8 +1,9 @@
 ﻿import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../presentation/providers/auth_provider.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/signup_screen.dart';
 import '../../presentation/screens/auth/forgot_password_screen.dart';
@@ -35,18 +36,44 @@ abstract class AppRoutes {
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Auth state notifier for router refresh
+class AuthChangeNotifier extends ChangeNotifier {
+  AuthChangeNotifier() {
+    _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      notifyListeners();
+    });
+  }
+  
+  late final StreamSubscription<AuthState> _subscription;
+  
+  bool get isLoggedIn => Supabase.instance.client.auth.currentSession != null;
+  
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+final authChangeNotifierProvider = ChangeNotifierProvider<AuthChangeNotifier>((ref) {
+  return AuthChangeNotifier();
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
-  // Use immediate check instead of stream
-  final isLoggedIn = ref.watch(isLoggedInProvider);
+  final authNotifier = ref.watch(authChangeNotifierProvider);
 
   return GoRouter(
+    refreshListenable: authNotifier,
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.language,
-    debugLogDiagnostics: false, // Disable for faster performance
+    debugLogDiagnostics: true,
 
     redirect: (context, state) {
+      final isLoggedIn = authNotifier.isLoggedIn;
       final isAuthRoute = state.matchedLocation.startsWith('/auth') ||
                           state.matchedLocation == AppRoutes.language;
+
+      print('Router redirect - isLoggedIn: $isLoggedIn, location: ${state.matchedLocation}');
 
       // Not logged in - must be on auth route
       if (!isLoggedIn && !isAuthRoute) {
