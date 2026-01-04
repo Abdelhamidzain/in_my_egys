@@ -8,7 +8,6 @@ import '../../../domain/entities/profile.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/router/app_router.dart';
 
-/// This screen is for adding family members (always "for someone else")
 class CreateProfileScreen extends ConsumerStatefulWidget {
   const CreateProfileScreen({super.key});
 
@@ -17,7 +16,7 @@ class CreateProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
-  int _currentStep = 0; // 0: Relationship, 1: Basic, 2: Health, 3: Summary
+  int _currentStep = 0;
   Map<Relationship, int> _relationshipCounts = {};
   Relationship _selectedRelationship = Relationship.mother;
   Gender? _selectedGender;
@@ -28,22 +27,15 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
   String? _selectedBloodType;
   double? _weight;
   double? _height;
+  List<String> _allergies = [];
+  List<String> _medicalConditions = [];
   bool _isLoading = false;
 
-  final List<String> _timezones = [
-    'Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait',
-    'Africa/Cairo', 'Europe/London', 'America/New_York',
-  ];
-
-  final List<String> _bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  final List<String> _timezones = ['Asia/Riyadh', 'Asia/Dubai', 'Asia/Kuwait', 'Africa/Cairo', 'Europe/London', 'America/New_York'];
 
   final Map<Relationship, int> _relationshipLimits = {
-    Relationship.mother: 1,
-    Relationship.father: 1,
-    Relationship.husband: 1,
-    Relationship.wife: 4,
-    Relationship.grandmother: 2,
-    Relationship.grandfather: 2,
+    Relationship.mother: 1, Relationship.father: 1, Relationship.husband: 1,
+    Relationship.wife: 4, Relationship.grandmother: 2, Relationship.grandfather: 2,
   };
 
   @override
@@ -60,22 +52,13 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
     super.dispose();
   }
 
-  DateTime? _getSelfBirthDate() {
-    final profiles = ref.read(profilesProvider).valueOrNull ?? [];
-    final selfProfile = profiles.where((p) => p.relationship == Relationship.self_).firstOrNull;
-    return selfProfile?.dateOfBirth;
-  }
-
   int _getMinimumAgeGap(Relationship rel) {
     switch (rel) {
       case Relationship.mother:
-      case Relationship.father:
-        return 12;
+      case Relationship.father: return 12;
       case Relationship.grandmother:
-      case Relationship.grandfather:
-        return 24;
-      default:
-        return 0;
+      case Relationship.grandfather: return 24;
+      default: return 0;
     }
   }
 
@@ -133,10 +116,14 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
         gender: _selectedGender,
         timezoneHome: _selectedTimezone,
       );
-      if (id != null && (_weight != null || _height != null || _selectedBloodType != null || _notesController.text.isNotEmpty)) {
+      if (id != null) {
         await ref.read(profileNotifierProvider.notifier).updateProfile(
-          profileId: id, weightKg: _weight, heightCm: _height,
+          profileId: id,
+          weightKg: _weight,
+          heightCm: _height,
           bloodType: _selectedBloodType,
+          allergies: _allergies.isNotEmpty ? _allergies : null,
+          medicalConditions: _medicalConditions.isNotEmpty ? _medicalConditions : null,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
         );
       }
@@ -196,17 +183,11 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.neutral100,
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
               ),
               child: Row(
                 children: [
-                  if (_currentStep > 0)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => setState(() => _currentStep--),
-                        child: Text(isAr ? 'السابق' : 'Previous'),
-                      ),
-                    ),
+                  if (_currentStep > 0) Expanded(child: OutlinedButton(onPressed: () => setState(() => _currentStep--), child: Text(isAr ? 'السابق' : 'Previous'))),
                   if (_currentStep > 0) const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
@@ -239,11 +220,9 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(isAr ? 'من تريد إضافته؟' : 'Who do you want to add?',
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800)),
+        Text(isAr ? 'من تريد إضافته؟' : 'Who do you want to add?', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800)),
         const SizedBox(height: 8),
-        Text(isAr ? 'اختر علاقتك بهذا الشخص' : 'Choose your relationship with this person',
-            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.neutral500)),
+        Text(isAr ? 'اختر علاقتك بهذا الشخص' : 'Choose your relationship', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.neutral500)),
         const SizedBox(height: 24),
         Wrap(
           spacing: 8, runSpacing: 8,
@@ -258,11 +237,7 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
                   Text(rel.getLabel(isAr ? 'ar' : 'en')),
                   if (rel == Relationship.wife && count > 0) ...[
                     const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(color: available ? AppColors.primary700 : AppColors.error, borderRadius: BorderRadius.circular(8)),
-                      child: Text('$count/4', style: const TextStyle(fontSize: 10, color: Colors.white)),
-                    ),
+                    Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1), decoration: BoxDecoration(color: available ? AppColors.primary700 : AppColors.error, borderRadius: BorderRadius.circular(8)), child: Text('$count/4', style: const TextStyle(fontSize: 10, color: Colors.white))),
                   ] else if (!available) ...[const SizedBox(width: 4), const Icon(Icons.check, size: 14, color: AppColors.success)],
                 ]),
                 selected: selected,
@@ -285,13 +260,9 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
       children: [
         Text(isAr ? 'المعلومات الأساسية' : 'Basic Info', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800)),
         const SizedBox(height: 8),
-        Text(isAr ? 'أدخل بيانات ${_selectedRelationship.getLabel('ar')}' : 'Enter ${_selectedRelationship.getLabel('en')}\'s information',
-            style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.neutral500)),
+        Text(isAr ? 'أدخل بيانات ${_selectedRelationship.getLabel('ar')}' : 'Enter ${_selectedRelationship.getLabel('en')}\'s info', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.neutral500)),
         const SizedBox(height: 24),
-        TextField(
-          controller: _nameController,
-          decoration: InputDecoration(labelText: isAr ? 'الاسم *' : 'Name *', prefixIcon: Icon(Icons.person_outline, color: AppColors.neutral400)),
-        ),
+        TextField(controller: _nameController, decoration: InputDecoration(labelText: isAr ? 'الاسم *' : 'Name *', prefixIcon: Icon(Icons.person_outline, color: AppColors.neutral400))),
         const SizedBox(height: 16),
         if (_selectedRelationship.defaultGender == null) ...[
           Text(isAr ? 'الجنس' : 'Gender', style: theme.textTheme.titleSmall?.copyWith(color: AppColors.neutral500)),
@@ -303,10 +274,10 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
           ]),
           const SizedBox(height: 24),
         ],
-        BirthdateWheelPicker(
+        AgeWheelPicker(
           title: isAr ? 'العمر' : 'Age',
           subtitle: isAr ? 'كم عمر ${_selectedRelationship.getLabel('ar')}؟' : 'How old is ${_selectedRelationship.getLabel('en')}?',
-          initialAge: _age ?? 30,
+          initialAge: _age,
           minAge: _getMinimumAgeGap(_selectedRelationship),
           maxAge: 120,
           onChanged: (age) => setState(() => _age = age),
@@ -321,40 +292,45 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(isAr ? 'المعلومات الصحية' : 'Health Info', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800)),
-        Text(isAr ? 'اختياري - يمكنك تحديثها لاحقاً' : 'Optional - you can update later', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.neutral500)),
+        Text(isAr ? 'اختياري - يمكنك تحديثها لاحقاً' : 'Optional - update later', style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.neutral500)),
         const SizedBox(height: 24),
         WeightWheelPicker(
           title: isAr ? 'الوزن' : 'Weight',
-          subtitle: isAr ? 'كم وزن ${_selectedRelationship.getLabel('ar')}؟' : 'How much does ${_selectedRelationship.getLabel('en')} weigh?',
+          subtitle: isAr ? 'كم وزن ${_selectedRelationship.getLabel('ar')}؟' : 'Weight of ${_selectedRelationship.getLabel('en')}?',
           initialValue: _weight ?? 70,
-          minValue: 20,
-          maxValue: 200,
+          minValue: 20, maxValue: 200,
           onChanged: (v) => setState(() => _weight = v),
           isAr: isAr,
         ),
         const SizedBox(height: 24),
         HeightWheelPicker(
           title: isAr ? 'الطول' : 'Height',
-          subtitle: isAr ? 'كم طول ${_selectedRelationship.getLabel('ar')}؟' : 'How tall is ${_selectedRelationship.getLabel('en')}?',
+          subtitle: isAr ? 'كم طول ${_selectedRelationship.getLabel('ar')}؟' : 'Height of ${_selectedRelationship.getLabel('en')}?',
           initialValue: _height ?? 170,
-          minValue: 100,
-          maxValue: 220,
+          minValue: 100, maxValue: 220,
           onChanged: (v) => setState(() => _height = v),
           isAr: isAr,
         ),
         const SizedBox(height: 24),
-        Text(isAr ? 'فصيلة الدم' : 'Blood Type', style: theme.textTheme.titleSmall?.copyWith(color: AppColors.neutral500)),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: _bloodTypes.map((t) {
-          final selected = _selectedBloodType == t;
-          return ChoiceChip(
-            label: Text(t), selected: selected,
-            onSelected: (s) => setState(() => _selectedBloodType = s ? t : null),
-            selectedColor: AppColors.cardLight, backgroundColor: Colors.white,
-            labelStyle: TextStyle(color: AppColors.primary800, fontWeight: selected ? FontWeight.w600 : FontWeight.normal),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: selected ? AppColors.primary700 : AppColors.neutral300)),
-          );
-        }).toList()),
+        BloodTypePicker(
+          title: isAr ? 'فصيلة الدم' : 'Blood Type',
+          subtitle: isAr ? 'اختر فصيلة الدم' : 'Select blood type',
+          selectedType: _selectedBloodType,
+          onChanged: (v) => setState(() => _selectedBloodType = v),
+          isAr: isAr,
+        ),
+        const SizedBox(height: 24),
+        MedicalInfoInput(
+          title: isAr ? 'البيانات الطبية' : 'Medical Data',
+          subtitle: isAr ? 'أضف الحساسية والحالات المرضية' : 'Add allergies and conditions',
+          hintAllergies: isAr ? 'مثال: البنسلين' : 'e.g. Penicillin',
+          hintConditions: isAr ? 'مثال: السكري' : 'e.g. Diabetes',
+          allergies: _allergies,
+          conditions: _medicalConditions,
+          onAllergiesChanged: (v) => setState(() => _allergies = v),
+          onConditionsChanged: (v) => setState(() => _medicalConditions = v),
+          isAr: isAr,
+        ),
       ],
     );
   }
@@ -373,27 +349,54 @@ class _CreateProfileScreenState extends ConsumerState<CreateProfileScreen> {
             gradient: LinearGradient(colors: [AppColors.cardLight, AppColors.cardLightAlt], begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Row(children: [
-            CircleAvatar(
-              backgroundColor: AppColors.primary700,
-              radius: 32,
-              child: Text(_nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 28)),
-            ),
-            const SizedBox(width: 16),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_nameController.text.isNotEmpty ? _nameController.text : '---', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800)),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: AppColors.primary700, borderRadius: BorderRadius.circular(12)),
-                child: Text(_selectedRelationship.getLabel(isAr ? 'ar' : 'en'), style: const TextStyle(color: Colors.white, fontSize: 12)),
-              ),
-              if (_age > 0) ...[
-                const SizedBox(height: 8),
-                Text('${_age} ${isAr ? 'سنة' : 'years old'}', style: TextStyle(color: AppColors.primary700)),
+          child: Column(
+            children: [
+              Row(children: [
+                CircleAvatar(backgroundColor: AppColors.primary700, radius: 32, child: Text(_nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 28))),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_nameController.text.isNotEmpty ? _nameController.text : '---', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary800)),
+                  const SizedBox(height: 4),
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: AppColors.primary700, borderRadius: BorderRadius.circular(12)), child: Text(_selectedRelationship.getLabel(isAr ? 'ar' : 'en'), style: const TextStyle(color: Colors.white, fontSize: 12))),
+                  if (_age > 0) ...[const SizedBox(height: 8), Text('$_age ${isAr ? 'سنة' : 'years'}', style: TextStyle(color: AppColors.primary700))],
+                ])),
+              ]),
+              if (_weight != null || _height != null || _selectedBloodType != null) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 12),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                  if (_weight != null) _SummaryItem(icon: Icons.monitor_weight_outlined, label: '${_weight!.round()} kg'),
+                  if (_height != null) _SummaryItem(icon: Icons.height, label: '${_height!.round()} cm'),
+                  if (_selectedBloodType != null) _SummaryItem(icon: Icons.bloodtype_outlined, label: _selectedBloodType!),
+                ]),
               ],
-            ])),
-          ]),
+              if (_allergies.isNotEmpty || _medicalConditions.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 12),
+                if (_allergies.isNotEmpty) ...[
+                  Row(children: [
+                    Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                    const SizedBox(width: 8),
+                    Text(isAr ? 'الحساسية:' : 'Allergies:', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary800)),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(_allergies.join(', '), style: TextStyle(color: AppColors.neutral500)),
+                ],
+                if (_medicalConditions.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Icon(Icons.medical_information_outlined, color: AppColors.info, size: 20),
+                    const SizedBox(width: 8),
+                    Text(isAr ? 'الحالات المرضية:' : 'Conditions:', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary800)),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(_medicalConditions.join(', '), style: TextStyle(color: AppColors.neutral500)),
+                ],
+              ],
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         Text(isAr ? 'المنطقة الزمنية' : 'Timezone', style: theme.textTheme.titleSmall?.copyWith(color: AppColors.neutral500)),
@@ -419,7 +422,6 @@ class _GenderCard extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-
   const _GenderCard({required this.icon, required this.label, required this.selected, required this.onTap});
 
   @override
@@ -428,11 +430,7 @@ class _GenderCard extends StatelessWidget {
     borderRadius: BorderRadius.circular(16),
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.cardLight : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: selected ? AppColors.primary700 : AppColors.neutral300, width: selected ? 2 : 1),
-      ),
+      decoration: BoxDecoration(color: selected ? AppColors.cardLight : Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: selected ? AppColors.primary700 : AppColors.neutral300, width: selected ? 2 : 1)),
       child: Column(children: [
         Icon(icon, color: selected ? AppColors.primary700 : AppColors.neutral400, size: 32),
         const SizedBox(height: 8),
@@ -442,5 +440,15 @@ class _GenderCard extends StatelessWidget {
   );
 }
 
+class _SummaryItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _SummaryItem({required this.icon, required this.label});
 
-
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    Icon(icon, color: AppColors.primary700, size: 24),
+    const SizedBox(height: 4),
+    Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary800)),
+  ]);
+}

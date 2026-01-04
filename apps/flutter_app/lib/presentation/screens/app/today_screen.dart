@@ -19,6 +19,15 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   bool _hasCheckedProfiles = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Refresh profiles when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(profilesProvider);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isAr = l10n.localeName == 'ar';
@@ -437,6 +446,7 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
 
 
 

@@ -70,10 +70,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     redirect: (context, state) {
       final isLoggedIn = authNotifier.isLoggedIn;
-      final isAuthRoute = state.matchedLocation.startsWith('/auth') ||
-                          state.matchedLocation == AppRoutes.language;
-
-      print('Router redirect - isLoggedIn: $isLoggedIn, location: ${state.matchedLocation}');
+      final location = state.matchedLocation;
+      final isAuthRoute = location.startsWith('/auth') || location == AppRoutes.language;
+      final isSetupRoute = location == AppRoutes.setupProfile;
 
       // Not logged in - must be on auth route
       if (!isLoggedIn && !isAuthRoute) {
@@ -161,3 +160,4 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+

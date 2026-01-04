@@ -508,3 +508,189 @@ class _TrianglePainter extends CustomPainter {
 
 // Backward compatibility
 typedef BirthdateWheelPicker = AgeWheelPicker;
+
+/// Blood Type Picker - matching design system
+class BloodTypePicker extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String? selectedType;
+  final ValueChanged<String?> onChanged;
+  final bool isAr;
+
+  const BloodTypePicker({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.selectedType,
+    required this.onChanged,
+    required this.isAr,
+  });
+
+  static const List<String> bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFD4EDBC),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Column(
+              children: [
+                Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary800), textAlign: TextAlign.center),
+                const SizedBox(height: 6),
+                Text(subtitle, style: TextStyle(fontSize: 14, color: AppColors.primary800.withOpacity(0.6)), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.2,
+              ),
+              itemCount: bloodTypes.length,
+              itemBuilder: (context, index) {
+                final type = bloodTypes[index];
+                final isSelected = selectedType == type;
+                return GestureDetector(
+                  onTap: () => onChanged(isSelected ? null : type),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFB8E986) : Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: isSelected ? AppColors.primary800 : Colors.transparent, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(type, style: TextStyle(fontSize: isSelected ? 20 : 18, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: AppColors.primary800)),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+/// Medical Info Input
+class MedicalInfoInput extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final String hintAllergies;
+  final String hintConditions;
+  final List<String> allergies;
+  final List<String> conditions;
+  final ValueChanged<List<String>> onAllergiesChanged;
+  final ValueChanged<List<String>> onConditionsChanged;
+  final bool isAr;
+
+  const MedicalInfoInput({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.hintAllergies,
+    required this.hintConditions,
+    required this.allergies,
+    required this.conditions,
+    required this.onAllergiesChanged,
+    required this.onConditionsChanged,
+    required this.isAr,
+  });
+
+  @override
+  State<MedicalInfoInput> createState() => _MedicalInfoInputState();
+}
+
+class _MedicalInfoInputState extends State<MedicalInfoInput> {
+  final _allergyController = TextEditingController();
+  final _conditionController = TextEditingController();
+
+  @override
+  void dispose() {
+    _allergyController.dispose();
+    _conditionController.dispose();
+    super.dispose();
+  }
+
+  void _addAllergy() {
+    final text = _allergyController.text.trim();
+    if (text.isNotEmpty && !widget.allergies.contains(text)) {
+      widget.onAllergiesChanged([...widget.allergies, text]);
+      _allergyController.clear();
+    }
+  }
+
+  void _addCondition() {
+    final text = _conditionController.text.trim();
+    if (text.isNotEmpty && !widget.conditions.contains(text)) {
+      widget.onConditionsChanged([...widget.conditions, text]);
+      _conditionController.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: const Color(0xFFD4EDBC), borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Text(widget.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary800))),
+            const SizedBox(height: 6),
+            Center(child: Text(widget.subtitle, style: TextStyle(fontSize: 14, color: AppColors.primary800.withOpacity(0.6)))),
+            const SizedBox(height: 20),
+            Text(widget.isAr ? 'الحساسية' : 'Allergies', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary800)),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: TextField(
+                controller: _allergyController,
+                decoration: InputDecoration(hintText: widget.hintAllergies, hintStyle: TextStyle(color: AppColors.primary800.withOpacity(0.4)), filled: true, fillColor: Colors.white.withOpacity(0.6), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+                onSubmitted: (_) => _addAllergy(),
+              )),
+              const SizedBox(width: 8),
+              IconButton(onPressed: _addAllergy, icon: const Icon(Icons.add_circle, color: AppColors.primary800, size: 32)),
+            ]),
+            if (widget.allergies.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: widget.allergies.map((a) => Chip(label: Text(a, style: const TextStyle(color: AppColors.primary800)), backgroundColor: const Color(0xFFB8E986), deleteIcon: const Icon(Icons.close, size: 18), onDeleted: () => widget.onAllergiesChanged(widget.allergies.where((e) => e != a).toList()))).toList()),
+            ],
+            const SizedBox(height: 20),
+            Text(widget.isAr ? 'الحالات المرضية' : 'Medical Conditions', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary800)),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: TextField(
+                controller: _conditionController,
+                decoration: InputDecoration(hintText: widget.hintConditions, hintStyle: TextStyle(color: AppColors.primary800.withOpacity(0.4)), filled: true, fillColor: Colors.white.withOpacity(0.6), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+                onSubmitted: (_) => _addCondition(),
+              )),
+              const SizedBox(width: 8),
+              IconButton(onPressed: _addCondition, icon: const Icon(Icons.add_circle, color: AppColors.primary800, size: 32)),
+            ]),
+            if (widget.conditions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: widget.conditions.map((c) => Chip(label: Text(c, style: const TextStyle(color: AppColors.primary800)), backgroundColor: const Color(0xFFB8E986), deleteIcon: const Icon(Icons.close, size: 18), onDeleted: () => widget.onConditionsChanged(widget.conditions.where((e) => e != c).toList()))).toList()),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
